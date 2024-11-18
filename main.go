@@ -94,6 +94,16 @@ type keystroke struct {
 	key  keyboard.Key
 }
 
+var offsets [][]int = [][]int{
+	{0, 1},
+	{1, 0},
+	{0, -1},
+	{-1, 0},
+	{-1, -1},
+	{1, 1},
+	{1, -1},
+	{-1, 1}}
+
 func AddKeystroke(buff *currKey) {
 	char, key, _ := keyboard.GetKey()
 	keyBuffMut.Lock()
@@ -122,12 +132,24 @@ func main() {
 
 	switch difficulty {
 	case "Easy":
+		width = 10
+		height = 10
+		mineNum = 20
 		break
 	case "Medium":
+		width = 20
+		height = 14
+		mineNum = 65
 		break
 	case "Hard":
+		width = 32
+		height = 15
+		mineNum = 120
 		break
 	case "Expert":
+		width = 40
+		height = 15
+		mineNum = 170
 		break
 	case "Custom":
 		for {
@@ -185,7 +207,11 @@ func main() {
 			char := keystroke.char
 			key := keystroke.key
 
-			CheckQuit(char, key)
+			if repeatStack != "" && keystroke.key == keyboard.KeyEsc {
+				repeatStack = ""
+			} else {
+				CheckQuit(char, key)
+			}
 
 			if char >= '0' && char <= '9' {
 				repeatStack += string(char)
@@ -219,11 +245,14 @@ func main() {
 						if field.area[cur.pos.x][cur.pos.y].hasMine {
 							gameEnd = true
 							endMessage = "You lose! :("
+						} else if field.area[cur.pos.x][cur.pos.y].mineNum == 0 {
+							pos := make([]position, 1, 1)
+							pos[0] = cur.pos
+							ClearBlank(&field, pos, make([]position, 0, 10))
 						}
 					} else if cur.mode == MARK {
-						field.area[cur.pos.x][cur.pos.y].hasMark = true
+						field.area[cur.pos.x][cur.pos.y].hasMark = !field.area[cur.pos.x][cur.pos.y].hasMark
 					}
-					break
 				}
 			}
 
@@ -243,9 +272,18 @@ func main() {
 					break
 				case 'c':
 					cur.mode = CLEAR
-					break
+					field.area[cur.pos.x][cur.pos.y].isCleared = true
+					if field.area[cur.pos.x][cur.pos.y].hasMine {
+						gameEnd = true
+						endMessage = "You lose! :("
+					} else if field.area[cur.pos.x][cur.pos.y].mineNum == 0 {
+						pos := make([]position, 1, 1)
+						pos[0] = cur.pos
+						ClearBlank(&field, pos, make([]position, 0, 10))
+					}
 				case 'm':
 					cur.mode = MARK
+					field.area[cur.pos.x][cur.pos.y].hasMark = !field.area[cur.pos.x][cur.pos.y].hasMark
 				}
 			}
 
@@ -288,14 +326,36 @@ func main() {
 
 }
 
+func ClearBlank(field *minefield, pos []position, finPos []position) {
+	newPos := make([]position, 0, 8*len(pos))
+	for _, v := range pos {
+		if field.area[v.x][v.y].mineNum == 0 && !slices.Contains(finPos, v) {
+			field.area[v.x][v.y].isCleared = true
+			for _, off := range offsets {
+				if v.x+off[0] >= 0 && v.x+off[0] < int(field.width) && v.y+off[1] >= 0 && v.y+off[1] < int(field.height) {
+					field.area[v.x+off[0]][v.y+off[1]].isCleared = true
+					newPos = append(newPos, position{v.x + off[0], v.y + off[1]})
+				}
+			}
+		}
+		finPos = append(finPos, v)
+	}
+
+	if len(newPos) > 0 {
+		ClearBlank(field, newPos, finPos)
+	}
+}
+
 func GetPlotChar(plot plot) string {
 	var char string = ""
 
 	if plot.isCleared {
 		if plot.hasMine {
 			char = "*"
-		} else {
+		} else if plot.mineNum > 0 {
 			char = strconv.Itoa(int(plot.mineNum))
+		} else {
+			char = " "
 		}
 	} else if plot.hasMark {
 		char = "!"
@@ -369,16 +429,6 @@ func CreateMinefield(width uint, height uint, mineNum uint) minefield {
 			}
 		}
 	}
-
-	var offsets [][]int = [][]int{
-		{0, 1},
-		{1, 0},
-		{0, -1},
-		{-1, 0},
-		{-1, -1},
-		{1, 1},
-		{1, -1},
-		{-1, 1}}
 
 	// Count adjacent mines for each plot
 	for x := uint(0); x < width; x++ {
