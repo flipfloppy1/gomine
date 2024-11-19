@@ -243,7 +243,7 @@ func main() {
 				case keyboard.KeySpace, keyboard.KeyEnter:
 					if cur.mode == CLEAR {
 						if firstClear {
-							for field.area[cur.pos.x][cur.pos.y].mineNum != 0 {
+							for !(field.area[cur.pos.x][cur.pos.y].mineNum == 0 && !field.area[cur.pos.x][cur.pos.y].hasMine) {
 								field = CreateMinefield(field.width, field.height, field.mineNum)
 							}
 							firstClear = false
@@ -280,7 +280,7 @@ func main() {
 				case 'c':
 					cur.mode = CLEAR
 					if firstClear {
-						for field.area[cur.pos.x][cur.pos.y].mineNum != 0 {
+						for !(field.area[cur.pos.x][cur.pos.y].mineNum == 0 && !field.area[cur.pos.x][cur.pos.y].hasMine) {
 							field = CreateMinefield(field.width, field.height, field.mineNum)
 						}
 						firstClear = false
