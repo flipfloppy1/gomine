@@ -169,6 +169,7 @@ func main() {
 	field := CreateMinefield(width, height, mineNum)
 	cur := cursor{position{int(width / 2), int(height / 2)}, CLEAR}
 	frameNum := uint(0)
+	firstClear := true
 
 	var repeatStack string = ""
 
@@ -241,6 +242,12 @@ func main() {
 					break
 				case keyboard.KeySpace, keyboard.KeyEnter:
 					if cur.mode == CLEAR {
+						if firstClear {
+							for field.area[cur.pos.x][cur.pos.y].mineNum != 0 {
+								field = CreateMinefield(field.width, field.height, field.mineNum)
+							}
+							firstClear = false
+						}
 						field.area[cur.pos.x][cur.pos.y].isCleared = true
 						if field.area[cur.pos.x][cur.pos.y].hasMine {
 							gameEnd = true
@@ -272,15 +279,22 @@ func main() {
 					break
 				case 'c':
 					cur.mode = CLEAR
+					if firstClear {
+						for field.area[cur.pos.x][cur.pos.y].mineNum != 0 {
+							field = CreateMinefield(field.width, field.height, field.mineNum)
+						}
+						firstClear = false
+					}
 					field.area[cur.pos.x][cur.pos.y].isCleared = true
 					if field.area[cur.pos.x][cur.pos.y].hasMine {
 						gameEnd = true
-						endMessage = "You lose! :("
+						endMessage = "You lose! :,("
 					} else if field.area[cur.pos.x][cur.pos.y].mineNum == 0 {
 						pos := make([]position, 1, 1)
 						pos[0] = cur.pos
 						ClearBlank(&field, pos, make([]position, 0, 10))
 					}
+
 				case 'm':
 					cur.mode = MARK
 					field.area[cur.pos.x][cur.pos.y].hasMark = !field.area[cur.pos.x][cur.pos.y].hasMark
@@ -290,6 +304,20 @@ func main() {
 			if slices.Contains(actionKeys, key) || slices.Contains(actionRunes, char) {
 				repeatStack = ""
 			}
+
+			clearCount := 0
+			for x := range field.area {
+				for y := range field.area[x] {
+					if field.area[x][y].isCleared && !field.area[x][y].hasMine {
+						clearCount++
+					}
+				}
+			}
+			if clearCount == int(field.width*field.height-field.mineNum) {
+				gameEnd = true
+				endMessage = "You win! :)"
+			}
+
 		}
 		endTime = time.Now()
 		time.Sleep(startTime.Sub(endTime) + time.Millisecond*20)
@@ -312,15 +340,7 @@ func main() {
 		}
 		frameNum++
 	}
-
 	clear()
-	for x := range field.area {
-		for y := range field.area[x] {
-			if field.area[x][y].hasMine {
-				field.area[x][y].isCleared = true
-			}
-		}
-	}
 	PrintMinefield(field, cur, false)
 	fmt.Println(endMessage)
 
