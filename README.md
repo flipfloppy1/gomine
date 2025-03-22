@@ -1,5 +1,5 @@
 # gomine
-A Minesweeper project that I'm using to learn Go.
+A Minesweeper project that I used to learn Go.
 
 ## Building
 First, [install Go](https://go.dev/doc/install).
